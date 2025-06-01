@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sortear Números - Bingo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #555;
+            font-size: 1.1rem;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.5rem;
+            text-align: center;
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #f5576c;
+            box-shadow: 0 0 10px rgba(245, 87, 108, 0.3);
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .btn-primary {
+            background: #f5576c;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #e04455;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .status.sucesso {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status.erro {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .info {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .info h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .numeros-sorteados {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .numero-sorteado {
+            background: #28a745;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 50%;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .links {
+            margin-top: 30px;
+        }
+
+        .links a {
+            color: #f5576c;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 Sortear Número</h1>
+        
+        <div class="info">
+            <h3>Status do Jogo</h3>
+            <p>Total sorteados: <strong id="totalAtual">0</strong>/75</p>
+            <p>Último número: <strong id="ultimoAtual">-</strong></p>
+            <div class="numeros-sorteados" id="numerosSorteados"></div>
+        </div>
+
+        <form id="sortearForm">
+            <div class="form-group">
+                <label for="numero">Número (1-75)</label>
+                <input type="number" id="numero" name="numero" min="1" max="75" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">🎯 Sortear Número</button>
+            <button type="button" class="btn btn-danger" onclick="resetarJogo()">🔄 Resetar Jogo</button>
+        </form>
+
+        <div class="status" id="status"></div>
+
+        <div class="links">
+            <a href="/">📊 Ver Quadro do Bingo</a>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('sortearForm');
+        const numeroInput = document.getElementById('numero');
+        const statusDiv = document.getElementById('status');
+        const totalAtualEl = document.getElementById('totalAtual');
+        const ultimoAtualEl = document.getElementById('ultimoAtual');
+        const numerosSorteadosEl = document.getElementById('numerosSorteados');
+
+        // Carregar estado inicial
+        function carregarEstado() {
+            fetch('/api/numeros-sorteados')
+                .then(response => response.json())
+                .then(data => {
+                    totalAtualEl.textContent = data.total;
+                    ultimoAtualEl.textContent = data.ultimoNumero || '-';
+                    
+                    numerosSorteadosEl.innerHTML = '';
+                    data.numerosSorteados.sort((a, b) => a - b).forEach(num => {
+                        const span = document.createElement('span');
+                        span.className = 'numero-sorteado';
+                        span.textContent = num;
+                        numerosSorteadosEl.appendChild(span);
+                    });
+                })
+                .catch(console.error);
+        }
+
+        // Sortear número
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const numero = numeroInput.value;
+            
+            try {
+                const response = await fetch('/api/sortear-numero', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ numero })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    mostrarStatus(`✅ Número ${data.numero} sorteado com sucesso!`, 'sucesso');
+                    numeroInput.value = '';
+                    carregarEstado();
+                } else {
+                    mostrarStatus(`❌ ${data.erro}`, 'erro');
+                }
+            } catch (error) {
+                mostrarStatus(`❌ Erro ao sortear número: ${error.message}`, 'erro');
+            }
+        });
+
+        // Resetar jogo
+        async function resetarJogo() {
+            if (!confirm('Tem certeza que deseja resetar o jogo? Todos os números sorteados serão perdidos.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/reset', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    mostrarStatus('🔄 Jogo resetado com sucesso!', 'sucesso');
+                    carregarEstado();
+                } else {
+                    mostrarStatus('❌ Erro ao resetar jogo', 'erro');
+                }
+            } catch (error) {
+                mostrarStatus(`❌ Erro: ${error.message}`, 'erro');
+            }
+        }
+
+        // Mostrar status
+        function mostrarStatus(mensagem, tipo) {
+            statusDiv.textContent = mensagem;
+            statusDiv.className = `status ${tipo}`;
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Gerar número aleatório
+        function gerarNumeroAleatorio() {
+            const numeroAleatorio = Math.floor(Math.random() * 75) + 1;
+            numeroInput.value = numeroAleatorio;
+        }
+
+        // Adicionar botão para número aleatório
+        const btnAleatorio = document.createElement('button');
+        btnAleatorio.type = 'button';
+        btnAleatorio.className = 'btn btn-secondary';
+        btnAleatorio.textContent = '🎲 Número Aleatório';
+        btnAleatorio.onclick = gerarNumeroAleatorio;
+        form.insertBefore(btnAleatorio, form.querySelector('.btn-primary'));
+
+        // Carregar estado inicial
+        carregarEstado();
+        
+        // Atualizar estado a cada 5 segundos
+        setInterval(carregarEstado, 5000);
+    </script>
+</body>
+</html>
